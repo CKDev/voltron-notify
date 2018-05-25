@@ -118,6 +118,10 @@ class Voltron::Notification::EmailNotification < ActiveRecord::Base
       @delivery_method = nil
       self.request_json = @request.to_json
       self.response_json = @response.to_json
+
+      # if use_queue?, meaning if this was sent via ActiveJob, we need to save ourself
+      # since we got to here within after_create, meaning setting the attributes alone won't cut it
+      self.save if use_queue?
     end
 
     def use_queue?
