@@ -1,5 +1,7 @@
 class Voltron::Notification::EmailNotification < ActiveRecord::Base
 
+  has_many :attachments, as: :notification_attachable, class_name: '::Voltron::Notification::Attachment'
+
   belongs_to :notification, inverse_of: :email_notifications
 
   after_initialize :setup
@@ -14,7 +16,7 @@ class Voltron::Notification::EmailNotification < ActiveRecord::Base
 
   validates_presence_of :subject, message: I18n.t('voltron.notification.email.subject_blank')
 
-  attr_accessor :vars, :attachments
+  attr_accessor :vars
 
   attr_accessor :created, :immediate
 
@@ -26,18 +28,14 @@ class Voltron::Notification::EmailNotification < ActiveRecord::Base
     Voltron::Notification.format_output_of(response_json)
   end
 
-  def attach(file, name = nil)
-    name = File.basename(file) if name.blank?
-    path = file
-
-    if file.is_a?(File)
-      path = file.path
-      file.close
-    elsif !File.exist?(path)
-      path = Voltron.asset.find(path)
+  def attach(urls)
+    urls.each do |name, url|
+      if url.starts_with? 'http'
+        attachments.build attachment_name: name, attachment: url
+      else
+        attachments.build attachment_name: name, attachment: Voltron.config.base_url + ActionController::Base.helpers.asset_url(url)
+      end
     end
-
-    attachments[name] = path
   end
 
   def mailer(klass = nil)
@@ -95,7 +93,6 @@ class Voltron::Notification::EmailNotification < ActiveRecord::Base
       @request = []
       @response = []
       @vars ||= {}
-      @attachments ||= {}
       @mailer_arguments = nil
       self.mailer_class ||= Voltron.config.notify.default_mailer
       self.mailer_method ||= Voltron.config.notify.default_method
@@ -130,8 +127,8 @@ class Voltron::Notification::EmailNotification < ActiveRecord::Base
     def mail
       # If no mailer arguments, use default order of arguments as defined in Voltron::NotificationMailer.notify
       if @mailer_arguments.blank?
-        @request << { to: to, from: from, subject: subject, template_path: template_path, template_name: template_name }.compact.merge(vars: vars, attachments: attachments)
-        @outgoing = mailer.send method, { to: to, from: from, subject: subject, template_path: template_path, template_name: template_name }.compact, vars, attachments
+        @request << { to: to, from: from, subject: subject, template_path: template_path, template_name: template_name }.compact.merge(vars: vars, attachments: attachments.pluck(:attachment_name, :attachment))
+        @outgoing = mailer.send method, { to: to, from: from, subject: subject, template_path: template_path, template_name: template_name }.compact, vars, attachments.pluck(:attachment_name, :attachment)
       else
         @request << @mailer_arguments.compact
         @outgoing = mailer.send method, *@mailer_arguments.compact
