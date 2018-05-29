@@ -1,3 +1,5 @@
+require 'open-uri'
+
 class Voltron::NotificationMailer < ApplicationMailer
   default from: Voltron.config.notify.email_from
 
@@ -6,7 +8,7 @@ class Voltron::NotificationMailer < ApplicationMailer
     var_args.each { |name, value| instance_variable_set "@#{name}", value }
 
     # Add all of the attachments
-    attachment_args.each { |name, file| attachments[name] = File.read(file) }
+    attachment_args.each { |name, file| attachments[name] = open(file).read }
 
     mail mail_args
   end

@@ -4,7 +4,7 @@ class Voltron::Notification::SmsNotification < ActiveRecord::Base
 
   include Rails.application.routes.url_helpers
 
-  has_many :attachments
+  has_many :attachments, as: :notification_attachable, class_name: '::Voltron::Notification::Attachment'
 
   belongs_to :notification, inverse_of: :sms_notifications
 
