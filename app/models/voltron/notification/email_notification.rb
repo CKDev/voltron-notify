@@ -113,7 +113,6 @@ class Voltron::Notification::EmailNotification < ActiveRecord::Base
 
     def after_deliver
       @created = true
-      @immediate = nil
       @mail_options = nil
       @delivery_method = nil
       self.request_json = @request.to_json
@@ -121,7 +120,7 @@ class Voltron::Notification::EmailNotification < ActiveRecord::Base
 
       # if use_queue?, meaning if this was sent via ActiveJob, we need to save ourself
       # since we got to here within after_create, meaning setting the attributes alone won't cut it
-      self.save if use_queue?
+      self.save if use_queue? && !@immediate
     end
 
     def use_queue?
@@ -131,12 +130,16 @@ class Voltron::Notification::EmailNotification < ActiveRecord::Base
     def mail
       # If no mailer arguments, use default order of arguments as defined in Voltron::NotificationMailer.notify
       if @mailer_arguments.blank?
-        @request << { to: to, from: from, subject: subject, template_path: template_path, template_name: template_name }.compact.merge(vars: vars, attachments: attachments.pluck(:attachment_name, :attachment))
-        @outgoing = mailer.send method, { to: to, from: from, subject: subject, template_path: template_path, template_name: template_name }.compact, vars, attachments.pluck(:attachment_name, :attachment)
+        @request << { to: to, from: from, subject: subject, template_path: template_path, template_name: template_name }.compact.merge(vars: vars, attachments: attachment_arguments)
+        @outgoing = mailer.send method, { to: to, from: from, subject: subject, template_path: template_path, template_name: template_name }.compact, vars, attachment_arguments
       else
         @request << @mailer_arguments.compact
         @outgoing = mailer.send method, *@mailer_arguments.compact
       end
+    end
+
+    def attachment_arguments
+      attachments.collect { |a| [a.attachment_name, a.attachment] }
     end
 
 end
