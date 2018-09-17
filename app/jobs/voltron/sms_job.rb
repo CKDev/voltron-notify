@@ -1,3 +1,5 @@
+require 'twilio-ruby'
+
 class Voltron::SmsJob < ActiveJob::Base
 
   discard_on ::Twilio::REST::RequestError
