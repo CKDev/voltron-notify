@@ -1,7 +1,7 @@
 require 'open-uri'
 
 class Voltron::NotificationMailer < ApplicationMailer
-  default from: Voltron.config.notify.email_from
+  default from: -> { Voltron.config.notify.email_from }
 
   def notify(mail_args, var_args = {}, attachment_args = {})
     # Make all passed in variables instance variables so they can be used in the template
