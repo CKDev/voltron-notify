@@ -121,8 +121,10 @@ class Voltron::Notification::SmsNotification < ActiveRecord::Base
       @created = true
       @job_options = nil
       @job_method = nil
-      self.request_json = @request.to_json
-      self.response_json = @response.to_json
+      if Voltron.config.notify.store_requests
+        self.request_json = @request.to_json
+        self.response_json = @response.to_json
+      end
       self.sid = response.first.try(:[], :sid)
       self.status = response.first.try(:[], :status) || 'unknown'
 
